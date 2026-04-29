@@ -823,7 +823,8 @@
       locked: false,
       hintOpen: false,
       choices: [],
-      rounds: []
+      rounds: [],
+      seenWords: []
     };
 
     const els = {
@@ -1024,6 +1025,7 @@
       const lengthPattern = shuffle(plan.lengths);
       const rounds = [];
       const usedWords = new Set();
+      const seenWords = new Set(state.seenWords || []);
 
       for (let i = 0; i < roundCount; i += 1) {
         const length = lengthPattern[i % lengthPattern.length];
@@ -1043,7 +1045,7 @@
         while (picksUsed[length] < pool.length) {
           const candidate = pool[picksUsed[length]];
           picksUsed[length] += 1;
-          if (!usedWords.has(candidate.word)) {
+          if (!usedWords.has(candidate.word) && !seenWords.has(candidate.word)) {
             nextItem = candidate;
             break;
           }
@@ -1054,7 +1056,20 @@
             if (item.minStage > stage) return false;
             if (item.idiom && !plan.idioms) return false;
             if (item.loanword && !plan.loanwords) return false;
-            return !usedWords.has(item.word);
+            return !usedWords.has(item.word) && !seenWords.has(item.word);
+          }))[0];
+        }
+
+        if (!nextItem) {
+          nextItem = shuffle(wordBank.filter((item) => {
+            if (wordLength(item.word) !== length) return false;
+            return !usedWords.has(item.word) && !seenWords.has(item.word);
+          }))[0];
+        }
+
+        if (!nextItem) {
+          nextItem = shuffle(wordBank.filter((item) => {
+            return !usedWords.has(item.word) && !seenWords.has(item.word);
           }))[0];
         }
 
@@ -1064,6 +1079,12 @@
       }
 
       return rounds;
+    }
+
+    function rememberRoundWords() {
+      const seenWords = new Set(state.seenWords || []);
+      state.rounds.forEach((item) => seenWords.add(item.word));
+      state.seenWords = [...seenWords];
     }
 
     function getCurrentWord() {
@@ -1076,7 +1097,8 @@
         index: state.index,
         score: state.score,
         totalScore: state.totalScore,
-        rounds: state.rounds.map((item) => item.word)
+        rounds: state.rounds.map((item) => item.word),
+        seenWords: state.seenWords
       };
       localStorage.setItem(saveKey, JSON.stringify(data));
     }
@@ -1103,6 +1125,11 @@
         state.score = Math.max(0, Number(data.score) || 0);
         state.totalScore = Math.max(0, Number(data.totalScore) || 0);
         state.rounds = loadedRounds;
+        state.seenWords = Array.isArray(data.seenWords)
+          ? [...new Set(data.seenWords.filter((word) => typeof word === "string"))]
+          : [...new Set(data.rounds)];
+        rememberRoundWords();
+        saveProgress();
         return true;
       } catch {
         return false;
@@ -1157,6 +1184,7 @@
       state.hintOpen = false;
       state.score = 0;
       state.rounds = buildRounds(state.stage);
+      rememberRoundWords();
       saveProgress();
       renderModes();
       render();
