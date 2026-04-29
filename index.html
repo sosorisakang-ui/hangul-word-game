@@ -188,7 +188,7 @@
       display: grid;
       grid-template-columns: repeat(var(--slots), minmax(0, 1fr));
       gap: clamp(8px, 2vw, 14px);
-      max-width: 660px;
+      max-width: 760px;
       width: 100%;
       margin: 0 auto;
     }
@@ -202,7 +202,7 @@
       border-radius: 8px;
       border: 3px solid #9bc4e8;
       background: #ffffff;
-      font-size: clamp(2.1rem, 8vw, 4.35rem);
+      font-size: clamp(4rem, 16vw, 8.5rem);
       font-weight: 900;
       line-height: 1;
       touch-action: manipulation;
@@ -563,7 +563,8 @@
       }
 
       .slot {
-        min-height: 58px;
+        min-height: 72px;
+        font-size: clamp(3.2rem, 17vw, 6.8rem);
       }
     }
   </style>
@@ -1339,24 +1340,23 @@
       setTimeout(clearAnswer, 900);
     }
 
-    function clearAnswer() {
+    function clearAnswer(showMessage = true) {
       state.selected.forEach((item) => {
         if (item) item.button.classList.remove("used");
       });
       state.selected = Array(wordLength(getCurrentWord().word)).fill(null);
       state.locked = false;
       updateSlots();
+      if (!showMessage) return;
       els.message.className = "message";
       els.message.textContent = "천천히 다시 골라보세요";
     }
 
     function fillOneLetter() {
-      if (state.locked || state.selected.every(Boolean)) return;
+      if (state.locked) return;
       const answerChars = [...getCurrentWord().word];
-      const emptyIndexes = state.selected
-        .map((item, index) => item ? null : index)
-        .filter((index) => index !== null);
-      const shuffledIndexes = shuffle(emptyIndexes);
+      clearAnswer(false);
+      const shuffledIndexes = shuffle(answerChars.map((_, index) => index));
       let filled = false;
 
       for (const index of shuffledIndexes) {
@@ -1370,23 +1370,11 @@
           filled = true;
           break;
         }
-
-        const misplacedIndex = state.selected.findIndex((item, itemIndex) => {
-          return item && item.char === char && answerChars[itemIndex] !== char;
-        });
-
-        if (misplacedIndex === -1) continue;
-
-        const misplaced = state.selected[misplacedIndex];
-        state.selected[misplacedIndex] = null;
-        state.selected[index] = misplaced;
-        filled = true;
-        break;
       }
 
       if (!filled) {
-        clearAnswer();
-        setTimeout(fillOneLetter, 0);
+        els.message.className = "message";
+        els.message.textContent = "채울 글자를 찾지 못했어요";
         return;
       }
 
