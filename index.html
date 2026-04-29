@@ -932,6 +932,19 @@
       return [...word].length;
     }
 
+    function isHardWord(item) {
+      return item.idiom || item.hard || item.loanword || item.type === "proper";
+    }
+
+    function getHardWeight(stage) {
+      if (stage < 3) return 0;
+      if (stage === 3) return 1;
+      if (stage === 4) return 2;
+      if (stage === 5) return 4;
+      if (stage === 6) return 6;
+      return 9;
+    }
+
     function getDictionaryHint(pos, length) {
       if (pos.includes("adverb")) return `${length}글자 부사예요.`;
       if (pos.includes("proper noun")) return `${length}글자 고유명사예요.`;
@@ -989,18 +1002,18 @@
         return { title: "조금 쉬움", note: "3글자 낱말이 조금 더 많아요", lengths: [2, 3, 3, 2, 3], idioms: false };
       }
       if (stage === 3) {
-        return { title: "보통", note: "사자성어와 4글자 낱말이 섞여요", lengths: [2, 2, 2, 3, 3, 3, 4, 4, 4, 4], idioms: true, loanwords: true };
+        return { title: "보통", note: "어려운 낱말이 조금씩 섞여요", lengths: [2, 2, 2, 3, 3, 3, 4, 4, 4, 4], idioms: true, loanwords: true };
       }
       if (stage === 4) {
         return { title: "조금 어려움", note: "어려운 표현이 더 자주 나와요", lengths: [2, 2, 2, 3, 3, 3, 4, 4, 4, 4], idioms: true, loanwords: true };
       }
       if (stage === 5) {
-        return { title: "어려움", note: "사자성어와 3-4글자 낱말이 섞여요", lengths: [2, 2, 2, 3, 3, 3, 4, 4, 4, 4], idioms: true, loanwords: true };
+        return { title: "어려움", note: "사자성어 비중이 높아져요", lengths: [2, 2, 3, 3, 3, 4, 4, 4, 4, 4], idioms: true, loanwords: true };
       }
       if (stage === 6) {
-        return { title: "도전", note: "4글자 문제가 조금 더 많아져요", lengths: [2, 2, 2, 3, 3, 3, 4, 4, 4, 4], idioms: true, loanwords: true };
+        return { title: "도전", note: "어려운 4글자가 중심이에요", lengths: [2, 3, 3, 4, 4, 4, 4, 4], idioms: true, loanwords: true };
       }
-      return { title: "높은 도전", note: "긴 외래어도 가끔 나와요", lengths: [4, 5, 4, 3, 4], idioms: true, loanwords: true };
+      return { title: "높은 도전", note: "사자성어와 긴 낱말이 많아요", lengths: [4, 5, 4, 3, 4, 5], idioms: true, loanwords: true };
     }
 
     function getWordPool(stage, length) {
@@ -1014,9 +1027,13 @@
       });
 
       if (pool.length > 0) {
-        const harderWords = pool.filter((item) => item.idiom || item.hard || item.loanword || item.type === "proper");
-        if (stage >= 3 && length >= 4 && harderWords.length > 0) {
-          return [...pool, ...harderWords, ...harderWords];
+        const harderWords = pool.filter(isHardWord);
+        const hardWeight = getHardWeight(stage);
+        if (hardWeight > 0 && harderWords.length > 0) {
+          return [
+            ...pool,
+            ...Array.from({ length: hardWeight }, () => harderWords).flat()
+          ];
         }
         return pool;
       }
